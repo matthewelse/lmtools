@@ -2,7 +2,12 @@
 
 A python package and collection of scripts, allowing currently connected mbed boards to be listed.
 
-Usage
+## Installation
+```
+$ python setup.py install
+```
+
+## Usage
 ```
 $ lm.py
 +----------+-------+-------+--------------------------------------+
