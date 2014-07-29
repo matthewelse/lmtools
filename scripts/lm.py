@@ -16,13 +16,13 @@ if __name__ == "__main__":
 	devices = get_connected_mbeds(json_file)
 
 	if args.micro is not None:
-		devices = [y for y in devices if y[2] == args.micro]
+		devices = {k: v for k, v in devices.items() if v['name'] == args.micro}
 
 	x = PrettyTable(["Name", "Port", "Drive", "Serial Number"])
 	x.align["Name"] = 'l'
 	x.align["Serial Number"] = 'l'
 
-	for device in devices:
-		x.add_row([device[3], device[1], device[2], device[0]])
+	for k, v in devices.items():
+		x.add_row([v["name"], v["port"], v["mountpoint"], k])
 
 	print x

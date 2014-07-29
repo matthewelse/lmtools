@@ -2,22 +2,6 @@ from PySide import QtCore, QtGui
 from lmtools import get_connected_mbeds, Listener
 import os, sys
 
-class DeviceWidget(QtGui.QWidget):
-    def __init__(self, device="Unknown", comport="COM N", driveLetter="F"):
-        super(DeviceWidget, self).__init__()
-
-        print device, comport, driveLetter
-
-        mainLayout = QtGui.QHBoxLayout()
-        deviceLabel = QtGui.QLabel(device)
-        namelabel = QtGui.QLabel(comport)
-        driveLabel = QtGui.QLabel(driveLetter)
-
-        mainLayout.addWidget(deviceLabel)
-        mainLayout.addWidget(namelabel)
-        mainLayout.addWidget(driveLabel)
-        self.setLayout(mainLayout)
-
 class USBListener(QtCore.QThread, Listener):
     __errorHappened = False
 
@@ -56,7 +40,7 @@ class Window(QtGui.QDialog):
         self.infoLabel.setStyleSheet("font-family: Consolas, Ubuntu Mono, monospace; font-size: 14px;")
         self.infoLabel.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Maximum);
         self.layout.addWidget(self.infoLabel)
-        self.setupConnectedBoards()
+        self.update_info_label()
         self.layout.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
         self.setLayout(self.layout)
 
@@ -65,70 +49,55 @@ class Window(QtGui.QDialog):
         QtCore.QObject.connect(self.processThread, QtCore.SIGNAL("update()"), self, QtCore.SLOT("refreshConnectedBoards()"), QtCore.Qt.QueuedConnection)
         self.processThread.start()
 
-        
-
-    def setupConnectedBoards(self):
-        boards = set(get_connected_mbeds())
+    def update_info_label(self, boards=None):
+        if boards is None:
+            boards = get_connected_mbeds()
 
         if len(boards) == 0:
             self.infoLabel.setText("No Devices Connected")
             return
 
-        max_boardname_length = max([len(board[3]) for board in boards])
-        max_comport_length = max([len(board[1]) for board in boards])
+        max_boardname_length = max([len(v["name"]) for v in boards.values()])
+        max_comport_length = max([len(v["port"]) for v in boards.values()])
 
         content = ""
         
-        for board in boards:
-            content += "%s%s%s%s%s<br />" % (board[3], "&nbsp;" * (1 + max_boardname_length - len(board[3])), board[1], "&nbsp;" * (1 + max_comport_length - len(board[1])), board[2])
+        for k, v in boards.items():
+            content += "%s%s%s%s%s<br />" % (v["name"], "&nbsp;" * (1 + max_boardname_length - len(v["name"])), v["port"], "&nbsp;" * (1 + max_comport_length - len(v["port"])), v["mount_point"])
 
         content = content[:-6]
-        self.infoLabel.setText(content)
+        self.infoLabel.setText(content)        
 
     def refreshConnectedBoards(self, maxnew=1):
-        newboards = set(get_connected_mbeds())
-        print newboards
+        newboards = get_connected_mbeds()
 
         if newboards == self.currentlyConnected:
             return
 
-        if len(newboards) == 0:
-            self.infoLabel.setParent(None)
-            newInfoLabel = QtGui.QLabel("No Devices Connected")
-            newInfoLabel.setTextFormat(QtCore.Qt.RichText)
-            newInfoLabel.setStyleSheet("font-family: Consolas, Ubuntu Mono, monospace; font-size: 14px;")
-            self.infoLabel = newInfoLabel
-            self.layout.addWidget(self.infoLabel)
-        else:
-            max_boardname_length = max([len(board[2]) for board in newboards])
-            max_comport_length = max([len(board[0]) for board in newboards])
+        self.update_info_label()
 
-            content = ""
-            
-            for board in newboards:
-                content += "%s%s%s%s%s<br />" % (board[3], "&nbsp;" * (1 + max_boardname_length - len(board[3])), board[1], "&nbsp;" * (1 + max_comport_length - len(board[1])), board[2])
+        newset = set(newboards)
+        currentset = set(self.currentlyConnected)
 
-            content = content[:-6]
-            
-            self.infoLabel.setText(content)
-            self.infoLabel.show()
-
-        insertedboards = newboards - self.currentlyConnected
-        removedboards = self.currentlyConnected - newboards
-        self.currentlyConnected = newboards
+        insertedboards = newset - currentset
+        removedboards = currentset - newset
 
         if len(insertedboards) == 1:
             board = insertedboards.pop()
 
             if self.messagesEnabled.isChecked():
                 icon = QtGui.QSystemTrayIcon.MessageIcon(QtGui.QSystemTrayIcon.Information)
-                self.trayIcon.showMessage("%s connected" % (board[3] if board[3] is not None else "Unknown board"), "On %s, connected to drive letter %s" % (board[1], board[2]), icon, 200)
+                connected_board = newboards[board]
+                self.trayIcon.showMessage("%s disconnected" % (connected_board["name"] if connected_board["name"] is not None else "Unknown board"), "It was on %s, connected to drive letter %s" % (connected_board["port"], connected_board["mount_point"]), icon, 200)
         elif len(removedboards) == 1:
             board = removedboards.pop()
 
             if self.messagesEnabled.isChecked():
                 icon = QtGui.QSystemTrayIcon.MessageIcon(QtGui.QSystemTrayIcon.Information)
-                self.trayIcon.showMessage("%s disconnected" % (board[3] if board[3] is not None else "Unknown board"), "It was on %s, connected to drive letter %s" % (board[1], board[2]), icon, 200)
+                disconnected_board = self.currentlyConnected[board]
+                self.trayIcon.showMessage("%s connected" % (disconnected_board["name"] if disconnected_board["name"] is not None else "Unknown board"), "On %s, connected to drive letter %s" % (disconnected_board["port"], disconnected_board["mount_point"]), icon, 200)
+
+        self.currentlyConnected = newboards
 
 
     def refreshAction(self):
@@ -143,10 +112,6 @@ class Window(QtGui.QDialog):
     def createTrayIcon(self):
         self.trayIconMenu = QtGui.QMenu(self)
 
-        widgetAction = QtGui.QWidgetAction(self.trayIconMenu)
-        widgetAction.setDefaultWidget(DeviceWidget())
-        self.trayIconMenu.addAction(widgetAction)
-        self.trayIconMenu.addSeparator()
         self.messagesEnabled = QtGui.QAction("Enable Notifications", self, checkable=True)
         self.trayIconMenu.addAction(self.messagesEnabled)
         self.trayIconMenu.addSeparator()        

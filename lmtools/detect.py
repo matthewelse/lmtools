@@ -11,4 +11,4 @@ def get_connected_mbeds(json_file=None):
 	if json_file is None:
 		json_file = os.path.join(os.path.dirname(sys.modules["lmtools"].__file__), "data/default.json")
 
-	return [(k[0], k[1], k[2], identify_connected_mbed(k[2], json_file)) for k in find_connected_mbeds()]
+	return {k[0]: {"name": identify_connected_mbed(k[2], json_file), "mount_point": k[2], "port": k[1]} for k in find_connected_mbeds()}
