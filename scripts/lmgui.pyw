@@ -30,7 +30,7 @@ class Window(QtGui.QDialog):
 
         # Set up the layout of the widget
             
-        self.setWindowFlags(QtCore.Qt.SplashScreen | QtCore.Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
         self.move(QtCore.QPoint(0, 100))
 
         self.layout = QtGui.QVBoxLayout()
@@ -39,6 +39,12 @@ class Window(QtGui.QDialog):
         self.infoLabel.setTextFormat(QtCore.Qt.RichText)
         self.infoLabel.setStyleSheet("font-family: Consolas, Ubuntu Mono, monospace; font-size: 14px;")
         self.infoLabel.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Maximum);
+        self.infoLabel.mousePressEvent = self.mousePressEvent
+        self.layout.mousePressEvent = self.mousePressEvent
+        self.infoLabel.mouseMoveEvent = self.mouseMoveEvent
+
+        self.mouseDown = False
+
         self.layout.addWidget(self.infoLabel)
         self.update_info_label()
         self.layout.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
@@ -48,6 +54,8 @@ class Window(QtGui.QDialog):
         self.processThread = USBListener()
         QtCore.QObject.connect(self.processThread, QtCore.SIGNAL("update()"), self, QtCore.SLOT("refreshConnectedBoards()"), QtCore.Qt.QueuedConnection)
         self.processThread.start()
+
+        self.moving = False
 
     def update_info_label(self, boards=None):
         if boards is None:
@@ -124,6 +132,19 @@ class Window(QtGui.QDialog):
         mbed_icon_location = os.path.join(os.path.dirname(sys.modules["lmtools"].__file__), "data/mbed-logo-blue.png")
 
         self.trayIcon.setIcon(QtGui.QIcon(mbed_icon_location))
+
+    def mousePressEvent(self, event):
+        print "mouse down!"
+        self.mouseDown = True
+
+    def mouseReleaseEvent(self, event):
+        self.mouseDown = False
+
+    def mouseMoveEvent(self, event):
+        if self.mouseDown:
+            print "move!"
+            self.move(0, event.globalY())
+
 
 if __name__ == '__main__':
  

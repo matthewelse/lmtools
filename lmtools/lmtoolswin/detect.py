@@ -1,6 +1,8 @@
 from wmi import WMI
+import pythoncom
 
 def find_connected_mbeds():
+    pythoncom.CoInitialize()
     c = WMI()
     vendor_ids = ['0D28'] # mbed, STM
 
