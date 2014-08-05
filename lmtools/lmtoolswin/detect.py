@@ -1,10 +1,11 @@
 from wmi import WMI
+from ..common import vendor_ids
 import pythoncom
+
 
 def find_connected_mbeds():
     pythoncom.CoInitialize()
     c = WMI()
-    vendor_ids = ['0D28'] # mbed, STM
 
     devices = {}
 
@@ -17,7 +18,8 @@ def find_connected_mbeds():
             continue
 
         if usb.Caption.find("COM") != -1:
-            comport = usb.Caption[usb.Caption.find("(")+1:usb.Caption.rfind(")")]
+            comport = usb.Caption[
+                usb.Caption.find("(") + 1:usb.Caption.rfind(")")]
 
             uid = id_chunks[2]
 
@@ -25,7 +27,7 @@ def find_connected_mbeds():
                 devices[uid] = [comport]
             else:
                 devices[uid].append(comport)
-    
+
     for usb in c.Win32_DiskDrive(InterfaceType="USB"):
         uid = usb.PNPDeviceID.split('\\')[2][:-2]
         drive_letters = []

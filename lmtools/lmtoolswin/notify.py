@@ -1,4 +1,9 @@
-import win32con, win32api, win32gui, ctypes, ctypes.wintypes
+import win32con
+import win32api
+import win32gui
+import ctypes
+import ctypes.wintypes
+
 
 class HARDWARESTRUCT(ctypes.Structure):
     _fields_ = [
@@ -9,40 +14,42 @@ class HARDWARESTRUCT(ctypes.Structure):
 
 PHARDWARESTRUCT = ctypes.POINTER(HARDWARESTRUCT)
 
+
 class Listener(object):
+
     def __init__(self):
         mapping = {
-            win32con.WM_DEVICECHANGE: self.onDeviceChange
-            }
+            win32con.WM_DEVICECHANGE: self.on_device_change
+        }
         wc = win32gui.WNDCLASS()
         wc.lpfnWndProc = mapping
         wc.lpszClassName = 'MyWindowClass'
         hinst = wc.hInstance = win32api.GetModuleHandle(None)
         classAtom = win32gui.RegisterClass(wc)
-        self.hwnd = win32gui.CreateWindow (
+        self.hwnd = win32gui.CreateWindow(
             classAtom,
             "",
             0,
-            0, 
             0,
-            win32con.CW_USEDEFAULT, 
+            0,
             win32con.CW_USEDEFAULT,
-            0, 
+            win32con.CW_USEDEFAULT,
             0,
-            hinst, 
+            0,
+            hinst,
             None
         )
 
-    def serial_device_connected(self):
+    def device_state_changed(self, connected=True):
         raise NotImplementedError
 
     def start_listening(self):
         win32gui.PumpMessages()
 
-    def onDeviceChange(self, hwnd, uMsg, wParam, lParam):
+    def on_device_change(self, hwnd, uMsg, wParam, lParam):
         if wParam == 0x8000 or wParam == 0x8004:
             data = ctypes.cast(lParam, PHARDWARESTRUCT)
             devicetype = data.contents.dbch_devicetype
 
             if devicetype == 0x2:
-                self.serial_device_connected()
+                self.device_state_changed(wParam == 0x8000)

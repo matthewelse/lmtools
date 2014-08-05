@@ -4,6 +4,7 @@ from os.path import isfile
 from urlparse import urlparse
 from platform import system
 
+
 def identify_connected_mbed(drive, json_file="lookup.json"):
     with open("lookup.json" if json_file is None else json_file, "rt") as json_file_ref:
         lookup = loads(json_file_ref.read())
@@ -11,8 +12,9 @@ def identify_connected_mbed(drive, json_file="lookup.json"):
     # We're only targeting windows or linux so we may as well do it this way.
     if system() == "Windows":
         drive = drive + ":/"
-    
-    loc = "mbed.htm" if isfile("%smbed.htm" % drive) else "MBED.htm" if isfile("%sMBED.htm" % drive) else None
+
+    loc = "mbed.htm" if isfile("%smbed.htm" % drive) else "MBED.htm" if isfile(
+        "%sMBED.htm" % drive) else None
     assert loc is not None, "mbed.htm does not exist!"
 
     with open("%s%s" % (drive, loc), "rt") as file_ref:
