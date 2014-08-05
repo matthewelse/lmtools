@@ -21,6 +21,9 @@ def find_connected_mbeds():
             comport = usb.Caption[
                 usb.Caption.find("(") + 1:usb.Caption.rfind(")")]
 
+            if id_chunks[1].split("&")[0].split('_')[1].upper() not in vendor_ids:
+                continue
+
             uid = id_chunks[2]
 
             if uid not in devices:

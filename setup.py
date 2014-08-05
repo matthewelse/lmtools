@@ -3,14 +3,14 @@ import os
 
 requirements = [
 	"beautifulsoup4",
-	"PySide",
 	"prettytable"
 ]
 
 if os.name == "nt":
 	requirements.append("WMI")
+	requirements.append("PySide")
 else:
-	requirements.append("glib")
+	requirements.append("pygobject")
 
 setup(name='lmtools',
 	  version='0.1',

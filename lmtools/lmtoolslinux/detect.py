@@ -1,7 +1,7 @@
 import pyudev
 import subprocess
 import os.path
-from .. import vendor_ids
+from ..common import vendor_ids
 
 # Linux supports STM as well :)
 vendor_ids = ['0d28', '0483']
@@ -34,7 +34,7 @@ def find_connected_mbeds():
         if "ID_VENDOR_ID" not in d:
             continue
 
-        if d['ID_VENDOR_ID'] not in acceptable_vendor_ids:
+        if d['ID_VENDOR_ID'] not in vendor_ids:
             continue
 
         # print d
@@ -69,3 +69,6 @@ def find_connected_mbeds():
         mbeds.append((d['ID_SERIAL_SHORT'], serial_port, mount_point))
 
     return mbeds
+
+if __name__ == "__main__":
+    print find_connected_mbeds()

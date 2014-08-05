@@ -6,12 +6,17 @@ from platform import system
 
 
 def identify_connected_mbed(drive, json_file="lookup.json"):
+    if drive is None:
+        return None
+
     with open("lookup.json" if json_file is None else json_file, "rt") as json_file_ref:
         lookup = loads(json_file_ref.read())
 
     # We're only targeting windows or linux so we may as well do it this way.
     if system() == "Windows":
         drive = drive + ":/"
+    else:
+        drive = drive + "/"
 
     loc = "mbed.htm" if isfile("%smbed.htm" % drive) else "MBED.htm" if isfile(
         "%sMBED.htm" % drive) else None
