@@ -21,8 +21,6 @@ class Listener(object):
         pass
 
     def callback(self, client, action, device, user_data):
-        for key in device.get_property_keys():
-            print "%s: %s" % (key, device.get_property(key))
         if device.get_property("ID_VENDOR_ID") in vendor_ids:
             self.device_state_changed(action == "add")
 
