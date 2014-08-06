@@ -1,1 +1,1 @@
-vendor_ids = ['0D28']  # mbed, STM
+vendor_ids = ['0d28', '0483']  # mbed, STM

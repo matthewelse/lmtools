@@ -5,18 +5,22 @@ import sys
 
 
 class USBListener(QtCore.QThread, Listener):
-    __errorHappened = False
-
     def __init__(self, parent=None):
         Listener.__init__(self)
         QtCore.QThread.__init__(self, parent)
-        self.exiting = False
+
+        self.connection_event = None
 
     def run(self):
         self.start_listening()
 
-    def device_state_changed(self, connected=True):
-        self.emit(QtCore.SIGNAL("update()"))
+    def device_state_changed(self, connected="add"):
+        print "Hello!"
+        self.connection_event = connected
+        self.emit(QtCore.SIGNAL("updateBoards()"))
+
+    def get_event(self):
+        return self.connection_event
 
 
 class Window(QtGui.QDialog):
@@ -52,19 +56,61 @@ class Window(QtGui.QDialog):
         self.mouseDown = False
 
         self.layout.addWidget(self.infoLabel)
-        self.update_info_label()
+        self.updateInfoLabel()
         self.layout.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
         self.setLayout(self.layout)
 
-        # Setup and start the listening thread
-        self.processThread = USBListener()
-        QtCore.QObject.connect(self.processThread, QtCore.SIGNAL(
-            "update()"), self, QtCore.SLOT("refreshConnectedBoards()"), QtCore.Qt.QueuedConnection)
-        self.processThread.start()
+        self.notification_thread = USBListener()
+        QtCore.QObject.connect(self.notification_thread, QtCore.SIGNAL(
+            "updateBoards()"), self, QtCore.SLOT("refreshBoards()"), QtCore.Qt.QueuedConnection)
+        self.notification_thread.start()
 
-    def update_info_label(self, boards=None):
+    def refreshBoards(self):
+        # Show notification if enabled
+
+        newboards = get_connected_mbeds()
+        event_type = self.notification_thread.get_event()
+
+        added_mbeds = set(newboards) - set(self.boards)
+        removed_mbeds = set(self.boards) - set(newboards)
+
+        changed_mbeds = added_mbeds | removed_mbeds
+
+        print changed_mbeds
+        print self.messagesEnabled.isChecked()
+
+        if self.messagesEnabled.isChecked() and len(changed_mbeds) == 1:
+            # Show a message :)
+            serial_number = changed_mbeds.pop()
+            if event_type == "add":
+                self.trayIcon.showMessage("%s connected" % newboards[serial_number]['name'],
+                    "Connected to %s\r\nMounted at %s" % (newboards[serial_number]['port'], newboards[serial_number]['mount_point']))
+                print "%s connected" % newboards[serial_number]['name']
+                print "Connected to %s\r\nMounted at %s" % (newboards[serial_number]['port'], newboards[serial_number]['mount_point'])
+
+        if len(newboards) == 0:
+            self.infoLabel.setText("No Devices Connected")
+            self.boards = newboards
+            return
+
+        max_boardname_length = max([len(v["name"]) for v in newboards.values()])
+        max_comport_length = max([len(v["port"]) for v in newboards.values()])
+
+        content = ""
+
+        for k, v in newboards.items():
+            content += "%s%s%s%s%s<br />" % (v["name"], "&nbsp;" * (1 + max_boardname_length - len(
+                v["name"])), v["port"], "&nbsp;" * (1 + max_comport_length - len(v["port"])), v["mount_point"])
+
+        content = content[:-6]
+        self.infoLabel.setText(content)
+        self.boards = newboards
+
+    def updateInfoLabel(self, boards=None):
         if boards is None:
             boards = get_connected_mbeds()
+
+        self.boards = boards
 
         if len(boards) == 0:
             self.infoLabel.setText("No Devices Connected")
@@ -82,47 +128,9 @@ class Window(QtGui.QDialog):
         content = content[:-6]
         self.infoLabel.setText(content)
 
-    def refreshConnectedBoards(self, maxnew=1):
-        newboards = get_connected_mbeds()
-
-        if newboards == self.currentlyConnected:
-            return
-
-        self.update_info_label()
-
-        newset = set(newboards)
-        currentset = set(self.currentlyConnected)
-
-        insertedboards = newset - currentset
-        removedboards = currentset - newset
-
-        if len(insertedboards) == 1:
-            board = insertedboards.pop()
-
-            if self.messagesEnabled.isChecked():
-                icon = QtGui.QSystemTrayIcon.MessageIcon(
-                    QtGui.QSystemTrayIcon.Information)
-                connected_board = newboards[board]
-                self.trayIcon.showMessage("%s disconnected" % (connected_board["name"] if connected_board[
-                                          "name"] is not None else "Unknown board"), "It was on %s, connected to drive letter %s" % (connected_board["port"], connected_board["mount_point"]), icon, 200)
-        elif len(removedboards) == 1:
-            board = removedboards.pop()
-
-            if self.messagesEnabled.isChecked():
-                icon = QtGui.QSystemTrayIcon.MessageIcon(
-                    QtGui.QSystemTrayIcon.Information)
-                disconnected_board = self.currentlyConnected[board]
-                self.trayIcon.showMessage("%s connected" % (disconnected_board["name"] if disconnected_board[
-                                          "name"] is not None else "Unknown board"), "On %s, connected to drive letter %s" % (disconnected_board["port"], disconnected_board["mount_point"]), icon, 200)
-
-        self.currentlyConnected = newboards
-
-    def refreshAction(self):
-        self.refreshConnectedBoards()
-
     def end(self):
         # End everything gracefully
-        self.processThread.exit()
+        self.notification_thread.exit()
         sys.exit()
 
     def createTrayIcon(self):
@@ -133,7 +141,7 @@ class Window(QtGui.QDialog):
         self.trayIconMenu.addAction(self.messagesEnabled)
         self.trayIconMenu.addSeparator()
         self.trayIconMenu.addAction(
-            QtGui.QAction("Refresh", self, triggered=self.refreshAction))
+            QtGui.QAction("Refresh", self, triggered=self.refreshBoards))
         self.trayIconMenu.addAction(
             QtGui.QAction("Quit", self, triggered=self.end))
 
@@ -146,7 +154,6 @@ class Window(QtGui.QDialog):
         self.trayIcon.setIcon(QtGui.QIcon(mbed_icon_location))
 
     def mousePressEvent(self, event):
-        print "mouse down!"
         self.mouseDown = True
         self.offset = event.pos()
 

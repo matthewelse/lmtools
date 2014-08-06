@@ -1,29 +1,33 @@
-import gudev
-import glib
-#from ..common import vendor_ids
-
-vendor_ids = ['0d28', '0483']
+from pyudev import Context, Monitor
+from pyudev import MonitorObserver
+from time import sleep
+from ..common import vendor_ids
 
 
 class Listener(object):
 
     def __init__(self):
-        self.client = gudev.Client(["usb/usb_device"])
-        self.client.connect("uevent", self.callback, None)
-
-        self.loop = glib.MainLoop()
+        self.context = Context()
+        self.monitor = Monitor.from_netlink(self.context)
+        self.monitor.filter_by(subsystem='usb')
+        self.observer = MonitorObserver(
+            self.monitor, callback=self.event_handler, name="blahblah")
+        self.observer.daemon = True
 
     def start_listening(self):
-        self.loop.run()
+        self.observer.start()
 
-    def device_state_changed(self, connected=True):
-        #raise NotImplementedError
-        pass
+    def event_handler(self, device):
+        d = {k: device[k] for k in device}
 
-    def callback(self, client, action, device, user_data):
-        if device.get_property("ID_VENDOR_ID") in vendor_ids:
-            self.device_state_changed(action == "add")
+        if 'ID_VENDOR_ID' not in d or 'ACTION' not in d:
+            return
 
-if __name__ == "__main__":
-    l = Listener()
-    l.start_listening()
+        if d['ID_VENDOR_ID'] not in vendor_ids:
+            return
+
+        sleep(2) # Give the drive time to mount
+        self.device_state_changed(d['ACTION'])
+
+    def device_state_changed(self, action):
+        raise NotImplementedError

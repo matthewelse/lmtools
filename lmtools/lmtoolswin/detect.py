@@ -2,6 +2,8 @@ from wmi import WMI
 from ..common import vendor_ids
 import pythoncom
 
+vendor_ids = ['0D28']
+
 
 def find_connected_mbeds():
     pythoncom.CoInitialize()

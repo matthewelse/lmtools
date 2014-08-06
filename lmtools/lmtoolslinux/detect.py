@@ -3,9 +3,6 @@ import subprocess
 import os.path
 from ..common import vendor_ids
 
-# Linux supports STM as well :)
-vendor_ids = ['0d28', '0483']
-
 
 def parse_ls_row(row):
     halves = row.split('->')
@@ -37,20 +34,25 @@ def find_connected_mbeds():
         if d['ID_VENDOR_ID'] not in vendor_ids:
             continue
 
-        # print d
+        # I'm not particularly proud of the following 30 lines of code, but
+        # they get the job done.
+        try:
+            ls = subprocess.Popen(
+                ('ls', '-oA', '/sys/block'), stdout=subprocess.PIPE)
+            output = subprocess.check_output(
+                ('grep', dev.device_path), stdin=ls.stdout)
+            ls.wait()
 
-        ls = subprocess.Popen(
-            ('ls', '-oA', '/sys/block'), stdout=subprocess.PIPE)
-        output = subprocess.check_output(
-            ('grep', dev.device_path), stdin=ls.stdout)
-        ls.wait()
+            drivename = parse_ls_row(output)
 
-        drivename = parse_ls_row(output)
+            lsblk = subprocess.Popen(('lsblk',), stdout=subprocess.PIPE)
+            goutput = subprocess.check_output(
+                ('grep', drivename), stdin=lsblk.stdout)
+            lsblk.wait()
 
-        lsblk = subprocess.Popen(('lsblk',), stdout=subprocess.PIPE)
-        goutput = subprocess.check_output(
-            ('grep', drivename), stdin=lsblk.stdout)
-        lsblk.wait()
+            mount_point = parse_lsblk_row(goutput)
+        except subprocess.CalledProcessError:
+            mount_point = None
 
         ls = subprocess.Popen(
             ('ls', '-oA', '/dev/serial/by-id'), stdout=subprocess.PIPE)
@@ -60,7 +62,6 @@ def find_connected_mbeds():
 
         serial_port = os.path.normpath(
             os.path.join('/dev/serial/by-id', parse_lss_row(output)))
-        mount_point = parse_lsblk_row(goutput)
 
         # return none if it hasn't been mounted yet.
         if mount_point == "disk":

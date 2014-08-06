@@ -19,7 +19,7 @@ class Listener(object):
 
     def __init__(self):
         mapping = {
-            win32con.WM_DEVICECHANGE: self.on_device_change
+            win32con.WM_DEVICECHANGE: self.event_handler
         }
         wc = win32gui.WNDCLASS()
         wc.lpfnWndProc = mapping
@@ -46,10 +46,11 @@ class Listener(object):
     def start_listening(self):
         win32gui.PumpMessages()
 
-    def on_device_change(self, hwnd, uMsg, wParam, lParam):
+    def event_handler(self, hwnd, uMsg, wParam, lParam):
         if wParam == 0x8000 or wParam == 0x8004:
             data = ctypes.cast(lParam, PHARDWARESTRUCT)
             devicetype = data.contents.dbch_devicetype
 
             if devicetype == 0x2:
-                self.device_state_changed(wParam == 0x8000)
+                print "Device changed :)"
+                self.device_state_changed("add" if wParam == 0x8000 else "remove")
