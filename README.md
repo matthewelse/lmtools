@@ -19,7 +19,7 @@ $ lm.py
 +----------+-------+-------+--------------------------------------+
 ```
 
-It is currently only compatible with Windows, however Linux support is fairly trivial to add, and folders have already been added to lmtools in expectation of this.
+lmtools is compatible with both Windows and Linux. It is untested on Mac OS X.
 
 ```
 lmgui.pyw
