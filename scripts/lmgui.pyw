@@ -5,6 +5,7 @@ import sys
 
 
 class USBListener(QtCore.QThread, Listener):
+
     def __init__(self, parent=None):
         Listener.__init__(self)
         QtCore.QThread.__init__(self, parent)
@@ -15,7 +16,6 @@ class USBListener(QtCore.QThread, Listener):
         self.start_listening()
 
     def device_state_changed(self, connected="add"):
-        print "Hello!"
         self.connection_event = connected
         self.emit(QtCore.SIGNAL("updateBoards()"))
 
@@ -76,24 +76,27 @@ class Window(QtGui.QDialog):
 
         changed_mbeds = added_mbeds | removed_mbeds
 
-        print changed_mbeds
-        print self.messagesEnabled.isChecked()
+        # print changed_mbeds
+        # print self.messagesEnabled.isChecked()
 
         if self.messagesEnabled.isChecked() and len(changed_mbeds) == 1:
             # Show a message :)
             serial_number = changed_mbeds.pop()
             if event_type == "add":
                 self.trayIcon.showMessage("%s connected" % newboards[serial_number]['name'],
-                    "Connected to %s\r\nMounted at %s" % (newboards[serial_number]['port'], newboards[serial_number]['mount_point']))
-                print "%s connected" % newboards[serial_number]['name']
-                print "Connected to %s\r\nMounted at %s" % (newboards[serial_number]['port'], newboards[serial_number]['mount_point'])
+                                          "Connected to %s\r\nMounted at %s" % (newboards[serial_number]['port'], newboards[serial_number]['mount_point']))
+                # print "%s connected" % newboards[serial_number]['name']
+                # print "Connected to %s\r\nMounted at %s" %
+                # (newboards[serial_number]['port'],
+                # newboards[serial_number]['mount_point'])
 
         if len(newboards) == 0:
             self.infoLabel.setText("No Devices Connected")
             self.boards = newboards
             return
 
-        max_boardname_length = max([len(v["name"]) for v in newboards.values()])
+        max_boardname_length = max([len(v["name"])
+                                    for v in newboards.values()])
         max_comport_length = max([len(v["port"]) for v in newboards.values()])
 
         content = ""

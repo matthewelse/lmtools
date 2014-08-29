@@ -4,6 +4,9 @@ import win32gui
 import ctypes
 import ctypes.wintypes
 
+if __name__ == "__main__":
+    import threading
+
 
 class HARDWARESTRUCT(ctypes.Structure):
     _fields_ = [
@@ -52,5 +55,13 @@ class Listener(object):
             devicetype = data.contents.dbch_devicetype
 
             if devicetype == 0x2:
-                print "Device changed :)"
+                # print "Device changed :)"
                 self.device_state_changed("add" if wParam == 0x8000 else "remove")
+
+def listen():
+    l = Listener()
+    l.start_listening()
+
+if __name__ == "__main__":
+    t = threading.Thread(target=listen)
+    t.start()
